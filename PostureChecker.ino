@@ -1,12 +1,15 @@
 #include <ArduinoBLE.h>
+#include<ArduinoJson.h>
 
 
 BLEService newService("180A"); // creating the service
 
-BLEStringCharacteristic resistanceBroadcast("2A58", BLERead | BLENotify, 4); // creating the Analog Value characteristic
-int analogPin = 0;
+BLEStringCharacteristic resistanceBroadcast("2A58", BLERead | BLENotify, 256); // creating the Analog Value characteristic
+int leftPin = 0;
+int middlePin = 3;
+int rightPin = 6;
 int Vin = 3.3;
-int R1 = 800;
+int R1 = 1800;
 
 void setup(){
   Serial.begin(9600);
@@ -19,8 +22,19 @@ void loop(){
     // check the battery level every 200ms
     // while the central is connected:
     while (central.connected()) {
-        int resistance = getResistance();
-        resistanceBroadcast.writeValue(String(resistance));
+        Serial.print("Left");
+        int left = getResistance(leftPin);
+        Serial.print("Middle");
+        int middle = getResistance(middlePin);
+        Serial.print("Right");
+        int right = getResistance(rightPin);
+        JsonDocument data;
+        data["left"] = left;
+        data["middle"] = middle;
+        data["right"] = right;
+        char output[256];
+        serializeJson(data, output);
+        resistanceBroadcast.writeValue(output);
         delay(1000);
     }
     
@@ -30,8 +44,8 @@ void loop(){
   }
 }
 
-int getResistance() {
-  int raw = analogRead(analogPin);
+int getResistance(int pin) {
+  int raw = analogRead(pin);
   if (raw) {  
     float buffer = raw * Vin;
     float Vout = (buffer)/1024.0;
